@@ -1,44 +1,28 @@
-import hashlib
-import time
+from web3 import Web3
+import json
 
-class Transaction:
-    def __init__(self, prev_hash, nonce, did, ts, signature, policy_hash):
-        self.prev_hash = prev_hash
-        self.nonce = nonce
-        self.did = did
-        self.ts = ts
-        self.signature = signature
-        self.policy_hash = policy_hash
+class BlockchainLogger:
+    def __init__(self, abi_path, contract_address, ganache_url="http://127.0.0.1:7545"):
+        self.web3 = Web3(Web3.HTTPProvider(ganache_url))
+        assert self.web3.is_connected(), "Web3 not connected to Ganache!"
+        with open(abi_path) as f:
+            abi = json.load(f)
+        self.contract = self.web3.eth.contract(address=contract_address, abi=abi)
+        self.account = self.web3.eth.accounts[0]
+        # For demo only; use secure key management in production
+        self.private_key = "0xd4edac3929bd2377508e3d4f1ff47ef5f54ea896392a1afb9039c1afcecb8057"  # Replace with actual key
 
-    def serialize(self):
-        return f"{self.prev_hash}{self.nonce}{self.did}{self.ts}{self.signature}{self.policy_hash}".encode()
-
-class Block:
-    def __init__(self, prev_hash, tx_list):
-        self.prev_hash = prev_hash
-        self.tx_list = tx_list
-        self.timestamp = int(time.time())
-        self.merkle_root = self.compute_merkle_root()
-
-    def compute_merkle_root(self):
-        hashes = [hashlib.sha3_256(tx.serialize()).hexdigest() for tx in self.tx_list]
-        while len(hashes) > 1:
-            hashes = [hashlib.sha3_256((hashes[i] + hashes[i+1]).encode()).hexdigest()
-                      for i in range(0, len(hashes), 2)]
-        return hashes[0] if hashes else None
-
-class Blockchain:
-    def __init__(self):
-        self.chain = []
-        self.current_transactions = []
-
-    def last_hash(self):
-        return self.chain[-1].merkle_root if self.chain else "0"*64
-
-    def add_transaction(self, tx):
-        self.current_transactions.append(tx)
-
-    def mine_block(self):
-        block = Block(self.last_hash(), self.current_transactions)
-        self.chain.append(block)
-        self.current_transactions = []
+    def log_event(self, prev_hash, nonce, did, timestamp, signature, policy_hash):
+        tx = self.contract.functions.logEvent(
+            prev_hash, nonce, did, timestamp, signature, policy_hash
+        ).build_transaction({
+            'from': self.account,
+            'nonce': self.web3.eth.get_transaction_count(self.account),
+            'gas': 2000000,
+            'gasPrice': self.web3.to_wei('50', 'gwei')
+        })
+        signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.private_key)
+        tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        print("Event stored in block:", receipt.blockNumber)
+        return receipt
