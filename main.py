@@ -7,6 +7,10 @@ from policy.engine import enforce_policy
 from session.manager import create_session, is_session_valid
 from crypto.utils import contextual_nonce, sha3_256
 import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def main():
     # Step 1: Identity and Key Generation
@@ -15,7 +19,7 @@ def main():
     print(f"Generated DID: {did}")
 
     # Step 2: Shamir Secret Sharing for session key
-    secret = b'sessionkey123456'
+    secret = b'sessionraw123456'
     shares = generate_shares(secret, 3, 5)
     recovered = reconstruct_secret(shares[:3])
     assert recovered == secret
@@ -31,33 +35,38 @@ def main():
     assert verify_signature(pub, message, signature), "Signature verification failed!"
     print("Signature verified successfully.")
 
-    # Step 5: Log event to blockchain (Ganache)
+    # Step 5: Log multiple events to blockchain and calculate TPS
     prev_hash = sha3_256(b'previous_block')  # For demo; replace with actual previous block hash
     abi_path = "build/AuthEvents_abi.json"
-    contract_address = "0x4f3D04bEfD49CC50fd60c452A0685D2a284CD5cE"  # Replace with your deployed contract address
+    contract_address = os.getenv("contract_address")
     logger = BlockchainLogger(abi_path, contract_address)
-    logger.log_event(
-        prev_hash=prev_hash,
-        nonce=nonce,
-        did=did,
-        timestamp=timestamp,
-        signature=signature.hex(),
-        policy_hash=policy_hash
-    )
 
-    # Step 6: Compute access and risk score
-    access_score = compute_access_score(0.95, 0.9, 0.8, 0.7)
-    risk_score = compute_risk_score(0.1, 0.2, 0.05)
-    print(f"Access Score: {access_score}, Risk Score: {risk_score}")
+    total_transactions = 500  # Total number of transactions to log
+    max_transactions_per_block = 200  # Max transactions per block
+    start_time = time.time()
 
-    # Step 7: Enforce policy
-    access = enforce_policy(access_score, risk_score)
-    print(f"Policy Decision: {access}")
+    for block_start in range(0, total_transactions, max_transactions_per_block):
+        block_transactions = min(max_transactions_per_block, total_transactions - block_start)
+        events_batch = []
+        for i in range(block_transactions):
+            event = {
+                'prevHash': prev_hash,
+                'nonce': nonce,
+                'did': did,
+                'timestamp': timestamp + block_start + i,
+                'signature': signature.hex(),
+                'policyHash': policy_hash
+            }
+            events_batch.append(event)
+        logger.log_events_batch(events_batch)
+        print(f"Block with {block_transactions} transactions logged.")
 
-    # Step 8: Session management
-    session_id = create_session(did, nonce, timestamp)
-    valid = is_session_valid(timestamp, 300, timestamp+100, False)
-    print(f"Session ID: {session_id}, Valid: {valid}")
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    tps = total_transactions / elapsed_time
+
+    print(f"Logged {total_transactions} transactions in {elapsed_time:.2f} seconds.")
+    print(f"Transactions per second (TPS): {tps:.2f}")
 
 if __name__ == "__main__":
     main()

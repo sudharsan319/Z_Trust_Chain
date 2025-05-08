@@ -180,5 +180,50 @@
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "prevHash",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "nonce",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "did",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "signature",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "policyHash",
+						"type": "string"
+					}
+				],
+				"internalType": "struct AuthEvent.Event[]",
+				"name": "eventsBatch",
+				"type": "tuple[]"
+			}
+		],
+		"name": "logEventsBatch",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	}
 ]

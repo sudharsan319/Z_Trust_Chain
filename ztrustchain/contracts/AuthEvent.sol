@@ -34,6 +34,20 @@ contract AuthEvent {
         emit AuthLogged(prevHash, nonce, did, timestamp, signature, policyHash);
     }
 
+    function logEventsBatch(Event[] memory eventsBatch) public {
+        for (uint i = 0; i < eventsBatch.length; i++) {
+            events.push(eventsBatch[i]);
+            emit AuthLogged(
+                eventsBatch[i].prevHash,
+                eventsBatch[i].nonce,
+                eventsBatch[i].did,
+                eventsBatch[i].timestamp,
+                eventsBatch[i].signature,
+                eventsBatch[i].policyHash
+            );
+        }
+    }
+
     function getEventCount() public view returns (uint256) {
         return events.length;
     }

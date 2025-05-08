@@ -5,6 +5,10 @@ def generate_keypair():
     pub = priv.get_verifying_key()
     return priv, pub
 
+#priv - ECSDA private key
+#pub - ECSDA public key
+#ECSDA - Elliptic Curve Digital Signature Algorithm
+
 def sign_message(priv, message):
     return priv.sign(message)
 
