@@ -22,3 +22,7 @@
 - Enforces a sample policy and prints the result
 - Creates and validates a session
 
+## Contributors
+
+- Deepak S 
+- Sudharsan K
